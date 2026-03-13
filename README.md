@@ -204,7 +204,35 @@ After landing the shell, I confirmed my access level and current working directo
 The shell was running as www-data from /var/www/html, which gave me a stable foothold on the target and allowed me to continue local enumeration.
 
 
-7. Credential Discovery
+## 7. Credential Discovery
+
+After gaining a shell as `www-data`, I began searching the web root for hardcoded credentials, secrets, and other useful strings that might help me pivot to a user account.
+
+I used `grep` to recursively search for keywords such as `password`, `admin`, `secret`, and `token` within `/var/www/html`.
+
+```bash
+grep -Rni "pass\|password\|user\|admin\|secret\|token" /var/www/html 2>/dev/null
+```
+This revealed hardcoded database credentials inside login.php:
+$user = "REDACTED";
+$password = "REDACTED";
+<img width="1303" height="486" alt="grep-webroot-credentials" src="https://github.com/user-attachments/assets/dab41ed2-6397-43d1-8cca-2c53752c5797" />
+
+It also revealed additional interesting references, including:
+
+- secret-script.php
+
+- supersecretadminpanel.html
+
+- supersecretmessageforadmin
+
+These findings suggested that the application stored sensitive information directly in the source code and that the credentials might be useful for further access.
+
+I also manually reviewed the discovered output and noted that the credentials appeared to belong to the backend database connection rather than directly to the Linux user account.
+
+Although these credentials did not immediately work for `su`, they provided a strong lead for pivoting further into the system.
+
+
 8. User Access via SSH Key Injection
 9. User Flag
 10. Privilege Escalation to Root
