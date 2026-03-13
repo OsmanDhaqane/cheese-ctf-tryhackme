@@ -76,7 +76,9 @@ I entered that payload into the username field and used any value for the passwo
 - Username: ' OR 'x'='x'#;
 - Password: test
 <img width="473" height="321" alt="sqli-payload-login" src="https://github.com/user-attachments/assets/19ad244c-0d07-4acf-ba31-93dc80015379" />
+
 This successfully bypassed authentication and redirected me into the application, confirming that the login form was vulnerable to SQL injection in the username field.
+
 <img width="939" height="322" alt="post-login-redirect" src="https://github.com/user-attachments/assets/3a974e03-52fd-431b-ba84-29d3006abd8e" />
 
 
