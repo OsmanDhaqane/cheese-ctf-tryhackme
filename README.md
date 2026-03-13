@@ -81,9 +81,44 @@ This successfully bypassed authentication and redirected me into the application
 
 <img width="939" height="322" alt="post-login-redirect" src="https://github.com/user-attachments/assets/3a974e03-52fd-431b-ba84-29d3006abd8e" />
 
+After the redirect, I landed on the admin panel page at:
 
-3. Local File Inclusion (LFI)
-4. Reading PHP Source Code
+`secret-script.php?file=supersecretadminpanel.html`
+
+At first glance, the panel did not reveal much useful information. The visible sections were very minimal, and some pages appeared to contain little or no actionable content. For example, the **Users** page only displayed a simple heading, and the **Messages** area did not immediately expose anything obvious. This suggested that the real value was not in the page content itself, but in how the application was loading files through the `file=` parameter.
+
+
+## 3. Local File Inclusion (LFI)
+
+After bypassing the login page, I noticed that the application loaded content through the `file=` parameter in `secret-script.php`.
+
+The URL looked like this:
+
+```text
+http://10.x.x.x/secret-script.php?file=supersecretadminpanel.html
+```
+Because the application was directly referencing files through a GET parameter, I tested for Local File Inclusion (LFI) by replacing the value with a path traversal sequence targeting /etc/passwd.
+```text
+http://10.x.x.x/secret-script.php?file=../../../../../../etc/passwd
+```
+<img width="1912" height="258" alt="lfi-etc-passwd" src="https://github.com/user-attachments/assets/230a0b5a-b200-4717-83b4-40881d36ca48" />
+
+The application returned the contents of /etc/passwd, which confirmed that the file= parameter was vulnerable to Local File Inclusion.
+
+This was an important finding because it meant I could read local files from the server and potentially inspect the source code of the vulnerable application.
+
+
+## 4. Reading PHP Source Code
+
+After confirming Local File Inclusion, I used the PHP stream wrapper `php://filter` to read the source code of the vulnerable script instead of executing it directly.
+
+I requested the file through Base64 encoding:
+
+```text
+http://10.x.x.x/secret-script.php?file=php://filter/convert.base64-encode/resource=secret-script.php
+```
+
+
 5. Remote Code Execution (RCE)
 6. Reverse Shell
 7. Credential Discovery
