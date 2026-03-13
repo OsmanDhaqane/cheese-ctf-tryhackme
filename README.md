@@ -60,6 +60,26 @@ ffuf -w /usr/share/seclists/Fuzzing/login_bypass.txt \
 -H "Content-Type: application/x-www-form-urlencoded" \
 -mc all
 ```
+
+<img width="802" height="642" alt="ffuf-login-bypass-1" src="https://github.com/user-attachments/assets/c000d026-c96c-4cf5-b7c9-13c35819e1d5" />
+
+Most responses returned the same status code and size, but a few payloads produced a different result. In particular, I observed 302 redirects, which suggested a successful authentication bypass.
+
+One working payload was:
+```
+' OR 'x'='x'#;
+```
+<img width="708" height="28" alt="ffuf-login-bypass-2" src="https://github.com/user-attachments/assets/ca3a4915-5ffe-4f50-b5f5-af5a50ee0606" />
+
+I entered that payload into the username field and used any value for the password.
+
+- Username: ' OR 'x'='x'#;
+- Password: test
+<img width="473" height="321" alt="sqli-payload-login" src="https://github.com/user-attachments/assets/19ad244c-0d07-4acf-ba31-93dc80015379" />
+This successfully bypassed authentication and redirected me into the application, confirming that the login form was vulnerable to SQL injection in the username field.
+<img width="939" height="322" alt="post-login-redirect" src="https://github.com/user-attachments/assets/3a974e03-52fd-431b-ba84-29d3006abd8e" />
+
+
 3. Local File Inclusion (LFI)
 4. Reading PHP Source Code
 5. Remote Code Execution (RCE)
