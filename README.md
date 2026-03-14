@@ -358,7 +358,28 @@ sleep 2
 ls -l /opt/xxd
 ```
 <img width="510" height="87" alt="trigger-exploit-timer" src="https://github.com/user-attachments/assets/f9b8a3cd-0e2f-4b74-ba05-b9b74d1999db" />
+
 This created /opt/xxd as a SUID binary owned by root.
 
-11. Root Flag
+
+## 11. Root Flag
+
+After starting the fixed timer, the service created `/opt/xxd` as a SUID binary owned by root.
+
+I verified the file permissions:
+
+```bash
+ls -l /opt/xxd
+```
+<img width="418" height="39" alt="ls-opt-xxd" src="https://github.com/user-attachments/assets/859b77d1-fb78-4373-aefa-dbf183dd44f5" />
+
+Then I used xxd to read the root flag from `/root/root.txt` and convert it back to plain text:
+
+```bash
+/opt/xxd /root/root.txt | /opt/xxd -r
+```
+<img width="523" height="151" alt="root-flag-xxd" src="https://github.com/user-attachments/assets/d12c2004-f815-4f2c-85a7-915dd817973d" />
+
+This allowed me to read the root flag without needing a full interactive root shell.
+
 12. Lessons Learned
