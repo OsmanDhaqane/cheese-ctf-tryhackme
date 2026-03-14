@@ -386,4 +386,19 @@ This allowed me to read the root flag without needing a full interactive root sh
 THM{{dca75486094810807fa...redacted}
 ```
 
-12. Lessons Learned
+
+## 12. Lessons Learned
+
+This room showed how small weaknesses can become serious when they are chained together.
+
+Some of the main things I learned from this room were:
+
+- SQL injection in a login form can still be enough to get initial access.
+- A file inclusion issue becomes much more dangerous when user input is passed directly into `include()`.
+- Reading source code can completely change the direction of the attack because it reveals how the application really works.
+- Hardcoded credentials in web files are risky, even when they are “only” meant for backend use.
+- Weak file permissions, like a world-writable `authorized_keys` file, can make lateral movement much easier.
+- Misconfigured `sudo` permissions and writable systemd files can create a direct path to root.
+- Even a binary like `xxd`, which normally looks harmless, can be abused when it has the SUID bit set.
+
+What I liked about this room is that the attack path was not about one big vulnerability, but about understanding how different issues connected together. It was a good reminder that good security depends on secure coding, proper permissions, and safe system configuration at every stage.
