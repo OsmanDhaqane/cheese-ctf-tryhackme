@@ -384,5 +384,6 @@ This allowed me to read the root flag without needing a full interactive root sh
 
 ```text
 THM{{dca75486094810807fa...redacted}
+```
 
 12. Lessons Learned
