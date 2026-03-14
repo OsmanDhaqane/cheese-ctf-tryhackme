@@ -277,7 +277,7 @@ This gave me shell access as the `[REDACTED]` user without needing to know the a
 
 ## 9. User Flag
 
-After injecting my SSH public key and authenticating successfully, I gained shell access as the `comte` user.
+After injecting my SSH public key and authenticating successfully, I gained shell access as the `[REDACTED]` user.
 
 To confirm the session and capture the user flag, I ran:
 
