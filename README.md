@@ -382,4 +382,7 @@ Then I used xxd to read the root flag from `/root/root.txt` and convert it back 
 
 This allowed me to read the root flag without needing a full interactive root shell.
 
+```text
+THM{{dca75486094810807fa...redacted}
+
 12. Lessons Learned
