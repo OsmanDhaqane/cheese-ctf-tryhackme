@@ -25,7 +25,7 @@ Cheese CTF is a Linux-based TryHackMe room that includes web enumeration, authen
 
 ## Walkthrough Sections
 ## 1. Reconnaissance
-I started with an Nmap SYN scan against the target to identify open ports and potential services.
+I started with an Nmap SYN scan against the target to identify open ports and possible services.
 
 ```bash
 nmap -sS 10.x.x.x
@@ -34,7 +34,8 @@ nmap -sS 10.x.x.x
 
 The scan reported a very large number of open ports. This suggested that the result might be noisy or intentionally misleading, so I decided not to focus on every reported service.
 
-To continue enumeration, I shifted attention to the web application and browsed the target over HTTP. I also performed directory and file enumeration to identify exposed pages and interesting resources.
+I then shifted attention to the web application and performed directory and file enumeration to identify exposed pages and interesting resources.
+
 ```bash
 feroxbuster -u http://10.x.x.x -w /usr/share/dirb/wordlists/common.txt -x php,txt,html
 ```
