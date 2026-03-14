@@ -214,8 +214,8 @@ I used `grep` to recursively search for keywords such as `password`, `admin`, `s
 grep -Rni "pass\|password\|user\|admin\|secret\|token" /var/www/html 2>/dev/null
 ```
 This revealed hardcoded database credentials inside login.php:
-$user = "REDACTED";
-$password = "REDACTED";
+$user = "[REDACTED]";
+$password = "[REDACTED]";
 <img width="1303" height="486" alt="grep-webroot-credentials" src="https://github.com/user-attachments/assets/dab41ed2-6397-43d1-8cca-2c53752c5797" />
 
 It also revealed additional interesting references, including:
@@ -232,8 +232,49 @@ I also manually reviewed the discovered output and noted that the credentials ap
 
 Although these credentials did not immediately work for `su`, they provided a strong lead for pivoting further into the system.
 
+## 8. User Access via SSH Key Injection
 
-8. User Access via SSH Key Injection
+Since direct access to the `[REDACTED]` user was still not available, I continued enumerating the home directories and SSH-related files.
+
+I found that `/home/[REDACTED]/.ssh/authorized_keys` was world-writable, which created a direct path to user access.
+
+```bash
+ls -ld /home/[REDACTED]/.ssh /home/ubuntu/.ssh
+ls -l /home/[REDACTED]/.ssh /home/ubuntu/.ssh
+find /home -name authorized_keys -ls 2>/dev/null
+```
+<img width="859" height="165" alt="ssh-directory-enumeration" src="https://github.com/user-attachments/assets/727c7701-cfc8-4fd8-a6b3-3544e61a0266" />
+
+The output showed that `/home/[REDACTED]/.ssh/authorized_keys` was world-writable (`-rw-rw-rw-`), which meant I could add my own public key and gain SSH access as the `[REDACTED]` user. In contrast, `/home/ubuntu/.ssh` was not accessible and did not appear to be the correct path.
+
+On my attacking machine, I generated a new SSH key pair:
+
+```bash
+ssh-keygen -t rsa -b 4096 -f cheese_key -N ""
+cat cheese_key.pub
+```
+
+<img width="1905" height="408" alt="generate-ssh-key" src="https://github.com/user-attachments/assets/0e0d4831-9fd0-46db-933f-04a8052760f8" />
+
+Then, from the remote shell as `www-data`, I appended my public key to `/home/[REDACTED]/.ssh/authorized_keys:`
+
+```bash
+echo 'ssh-rsa AAAA... kali@kali' >> /home/[REDACTED]/.ssh/authorized_keys
+tail -n 1 /home/[REDACTED]/.ssh/authorized_keys
+``` 
+<img width="1899" height="143" alt="append-authorized-key" src="https://github.com/user-attachments/assets/2e107eec-2b82-4a67-b31a-0c9079291be2" />
+
+After that, I connected over SSH using the private key I had generated:
+
+```bash
+ssh -i cheese_key [REDACTED]@10.x.x.x
+```
+
+This gave me shell access as the `[REDACTED]` user without needing to know the account password.
+
+<img width="686" height="718" alt="ssh-login-user" src="https://github.com/user-attachments/assets/5bd36892-9b9d-4af1-8c5c-876f1e95607f" />
+
+
 9. User Flag
 10. Privilege Escalation to Root
 11. Root Flag
