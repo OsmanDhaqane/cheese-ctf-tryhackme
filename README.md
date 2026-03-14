@@ -86,7 +86,7 @@ After the redirect, I landed on the admin panel page at:
 
 `secret-script.php?file=supersecretadminpanel.html`
 
-At first glance, the panel did not reveal much useful information. The visible sections were very minimal, and some pages appeared to contain little or no actionable content. For example, the **Users** page only displayed a simple heading, and the **Messages** area did not immediately expose anything obvious. This suggested that the real value was not in the page content itself, but in how the application was loading files through the `file=` parameter.
+At first glance, the panel did not reveal much useful information. The visible sections were very minimal, and some pages appeared to contain little or no actionable content. For example, the `Users` page only displayed a simple heading, and the `Messages` area did not immediately expose anything obvious. This suggested that the real value was not in the page content itself, but in how the application was loading files through the `file=` parameter.
 
 
 ## 3. Local File Inclusion (LFI)
@@ -124,7 +124,7 @@ The server returned the Base64-encoded contents of `secret-script.php`, which I 
 
 <img width="1415" height="138" alt="decoded-secret-script-source" src="https://github.com/user-attachments/assets/de5d0956-e6bd-49bd-b1a5-a20a6e251063" />
 
-The code showed that the application directly passed user-controlled input into include($file) without validation or sanitization. This confirmed that the `file=` parameter was not only vulnerable to file inclusion, but also a likely path toward remote code execution.
+The code showed that the application directly passed user-controlled input into `include($file)` without validation or sanitization. This confirmed that the `file=` parameter was not only vulnerable to file inclusion, but also a likely path toward remote code execution.
 
 
 ## 5. Remote Code Execution (RCE)
@@ -136,7 +136,7 @@ include($file);
 ```
 Because the file parameter was passed directly into `include()`, I explored whether the LFI could be turned into code execution.
 
-A simple data:// wrapper test did not return command output, so I moved to a more advanced technique using `php_filter_chain_generator`, which can build a filter chain that results in PHP code execution through the vulnerable `include()` call.
+A simple `data://` wrapper test did not return command output, so I moved to a more advanced technique using `php_filter_chain_generator`, which can build a filter chain that results in PHP code execution through the vulnerable `include()` call.
 
 I first cloned the tool and generated a test payload that would run the `id` command.
 
